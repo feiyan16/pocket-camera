@@ -14,7 +14,7 @@
 
 #include "display.h"    // our own header first: the pins and the promises this file must keep
 #include "config.h"     // adjustable settings: rotations, crop, colours, DISPLAY_HZ ...
-#include "labels.h"     // the label (label, camMask) and buildTextMask() / textMask for messages
+#include "labels.h"     // allLabels (every label and its camMask), buildTextMask() / textMask for messages
 #include "settings.h"   // gridOn: whether to draw the grid lines
 
 // ----------------------------------------------------------------------
@@ -102,7 +102,7 @@ bool startDisplay() {
 // Full-screen messages
 // ----------------------------------------------------------------------
 void showMessage(const char *msg, int holdMs) {
-  label.active = false;              // any label disappears with the rest of the screen
+  for (int i = 0; i < NUM_LABELS; i++) allLabels[i]->active = false;  // every label disappears with the rest of the screen
   int w = buildTextMask(msg);        // draw the words into textMask; w = their width
   int x0 = (TXT_W - w) / 2;          // left edge that centres them. Example: (280 - 132) / 2 = 74
   int y0 = (TXT_H - MASK_H) / 2;     // top edge that centres them vertically
@@ -137,7 +137,6 @@ void showFrame(camera_fb_t *fb) {
   // Treat the frame's bytes as 16-bit pixels. (uint16_t *) "casts" the pointer to that type.
   const uint16_t *src = (const uint16_t *)fb->buf;
   int frameW = (int)fb->width;         // pixels per frame row (400)
-  int labelW = label.cx1 - label.cx0;  // width of the label rectangle (camera coordinates)
   uint16_t *dst = screenBuf;           // where the next screen row goes; moves forward one row at a time
 
   for (int y = 0; y < CAM_H; y++) {    // for each of the 280 screen rows...
@@ -160,14 +159,18 @@ void showFrame(camera_fb_t *fb) {
         dst[GRID_X2] = GRID_COLOR;                      // one pixel of the second vertical line
       }                                                 // end of grid
     }                                                   // end of "if gridOn"
-    // 3. The label, if one is showing and this row passes through it
-    if (label.active && y >= label.cy0 && y < label.cy1) {
-      const uint8_t *m = camMask + (y - label.cy0) * labelW;  // the label-mask row matching this screen row
-      for (int x = 0; x < labelW; x++) {                     // across the label's width:
-        if (m[x] == 2)      dst[label.cx0 + x] = label.color;     // letter pixel: the label colour
-        else if (m[x] == 1) dst[label.cx0 + x] = OUTLINE_COLOR;   // outline pixel: dark
-      }                                                      // (0 = see-through: the picture stays)
-    }                                                        // end of label
+    // 3. Every label that is showing and passes through this row
+    for (int i = 0; i < NUM_LABELS; i++) {                   // the bottom label and the three menu labels
+      const Label &l = *allLabels[i];                        // "*" follows the address to the label itself; "&" = no copy
+      if (l.active && y >= l.cy0 && y < l.cy1) {             // showing, and this row is inside its rectangle
+        int lw = l.cx1 - l.cx0;                              // its width in camera coordinates
+        const uint8_t *m = l.camMask + (y - l.cy0) * lw;     // its mask row that matches this screen row
+        for (int x = 0; x < lw; x++) {                       // across its width:
+          if (m[x] == 2)      dst[l.cx0 + x] = l.color;          // letter pixel: its colour
+          else if (m[x] == 1) dst[l.cx0 + x] = OUTLINE_COLOR;    // outline pixel: dark
+        }                                                    // (0 = see-through: the picture stays)
+      }                                                      // end of "this row is inside it"
+    }                                                        // end of labels
     dst += CAM_W;                      // move to where the next row starts (240 pixels further on)
   }                                    // end of rows
   // Send all 240 x 280 pixels, starting at the top-left corner (0, 0).

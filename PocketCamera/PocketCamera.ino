@@ -139,6 +139,10 @@ void loop() {
   if (label.active && millis() - label.shownAt >= LABEL_MS) {
     hideLabel();                       // switch it off
   }                                    // end of label timing
+  // Same for the preset menu (all three lines appear together, so checking mainLabel is enough).
+  if (mainLabel.active && millis() - mainLabel.shownAt >= LABEL_MS) {
+    hidePresetMenu();                  // switch all three off
+  }                                    // end of menu timing
 
   // Live preview: get the newest frame, draw it, give the buffer back.
   camera_fb_t *fb = esp_camera_fb_get();   // NULL if no frame was ready in time

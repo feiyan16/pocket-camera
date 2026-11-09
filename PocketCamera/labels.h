@@ -36,27 +36,34 @@ const int MASK_H = FONT_H + 2;                        // 16 + 2 = 18 pixels tall
 // Types
 // ----------------------------------------------------------------------
 // A struct bundles several values into one new type.
-// The label currently on screen, as a rectangle in camera coordinates.
+// One on-screen label, as a rectangle in camera coordinates plus its own pixels.
 struct Label {
   bool active;              // true = a label is showing
   int cx0, cy0, cx1, cy1;   // corners; x1 and y1 are "just past" the edge, so width = cx1 - cx0
   uint16_t color;           // colour of the letters (RGB565)
   unsigned long shownAt;    // when it appeared (millis()), to know when to hide it
-  uint8_t textMask[MASK_H][MASK_W];   // text-coordinate mask (starts all 0)
-  uint8_t camMask[MASK_W * MASK_H];   // camera-coordinate mask (starts all 0)
+  // This label's own pixels, already turned to camera coordinates and stored
+  // row after row (0 = see-through, 1 = outline, 2 = letter). Each label needs
+  // its own, otherwise drawing one label would overwrite the others.
+  uint8_t camMask[MASK_W * MASK_H];
 };                          // a struct definition ends with a semicolon
 
 // ----------------------------------------------------------------------
 // Shared variables (created in labels.cpp; "extern" explained in display.h)
 // ----------------------------------------------------------------------
-extern Label label;   // the one label: showFrame() paints it, loop() hides it after LABEL_MS
-extern Label mainLabel;
-extern Label prevLabel;
-extern Label nextLabel;
+extern Label label;       // the bottom label (preset name, SAVED #0008, ...): loop() hides it after LABEL_MS
+extern Label mainLabel;   // preset menu: the selected item
+extern Label prevLabel;   // preset menu: the item above it
+extern Label nextLabel;   // preset menu: the item below it
 
-// Label masks: small pixel grids where 0 = see-through, 1 = outline, 2 = letter.
-extern uint8_t textMask[MASK_H][MASK_W];   // the label as you read it (text coordinates), 2-D: [row][column]
-extern uint8_t camMask[MASK_W * MASK_H];   // the same label turned to camera coordinates, stored row after row
+// Every label in one list, so other files (showFrame(), showMessage()) can loop over them.
+const int NUM_LABELS = 4;                 // how many labels exist
+extern Label *allLabels[NUM_LABELS];      // their addresses ("Label *" = address of a Label)
+
+// Scratch mask, shared: text is drawn here first, as you read it, then copied
+// into one label's camMask (or drawn straight to the screen by showMessage()).
+// 0 = see-through, 1 = outline, 2 = letter. 2-D: [row][column].
+extern uint8_t textMask[MASK_H][MASK_W];
 
 // ----------------------------------------------------------------------
 // Functions (the code is in labels.cpp)
@@ -70,8 +77,16 @@ int buildTextMask(const char *text);
 // Example: showLabel("SUNNY", 0xFFE0) shows "SUNNY" in yellow.
 void showLabel(const char *text, uint16_t color);
 
+// Width in pixels a label of this text will have, without drawing it.
+// Example: "SUNNY" -> 5 x 13 + 2 = 67.
+int labelWidth(const char *text);
+
+// Shows the three-line preset menu on the right (as you hold the camera):
+// prev_text above, main_text (white) in the middle, next_text below (grey).
+// Example: showPresetMenu("CLOUDY", "SUNNY", "OFFICE").
 void showPresetMenu(const char *main_text, const char *prev_text, const char *next_text);
 
+// Hides the three menu labels.
 void hidePresetMenu();
 
 // Hides the label. Nothing needs erasing: the next frame simply doesn't include it.

@@ -7,7 +7,7 @@
 #include "settings.h"   // our own header: the promises this file must keep
 #include <Preferences.h>  // stores small values in the chip's flash; comes with the ESP32 board package
 #include "camera.h"     // presets[], NUM_PRESETS and applyPreset()
-#include "labels.h"     // showLabel(), to show the preset name or grid state
+#include "labels.h"     // showLabel() for the grid state, showPresetMenu() for the menu
 
 // ----------------------------------------------------------------------
 // The variables promised with "extern" in settings.h are created here.
@@ -55,6 +55,12 @@ void showGridLabel() {
   showLabel(gridOn ? "GRID: ON" : "GRID: OFF", 0xFFFF);  // pick the text with "? :", 0xFFFF = white
 }                                      // end of showGridLabel
 
+// Display name of any wheel item. Example: 0 -> "AUTO", GRID_ITEM -> "GRID".
+// "? :" means "if ... then ... else ...".
+const char *itemName(int i) {
+  return (i == GRID_ITEM) ? "GRID" : presets[i].name;   // GRID has no preset entry, so its name is written here
+}                                      // end of itemName
+
 // Moves through the list (presets, then GRID), wrapping around at both ends.
 void changeItem(int clicks) {          // clicks: positive = forward, negative = backward
   // In C++, % keeps the sign: -1 % 8 = -1. Adding NUM_ITEMS and taking % again
@@ -65,7 +71,12 @@ void changeItem(int clicks) {          // clicks: positive = forward, negative =
   } else {                             // landed on a preset:
     currentPreset = currentItem;       //   use it
     applyPreset();                     //   send it to the camera
-    showLabel(presets[currentPreset].name, 0xFFE0);  // and show its name in yellow
   }                                    // end of the if/else
+  // Show the menu on the right: the item above, the selected item, the item below.
+  // The list wraps round, so above AUTO is GRID and below GRID is AUTO.
+  // Example: currentItem 0 (AUTO), NUM_ITEMS 8 -> prev = (0 - 1 + 8) % 8 = 7 (GRID), next = 1 (SUNNY).
+  int prev = (currentItem - 1 + NUM_ITEMS) % NUM_ITEMS;   // item above
+  int next = (currentItem + 1) % NUM_ITEMS;               // item below
+  showPresetMenu(itemName(currentItem), itemName(prev), itemName(next));  // white middle, grey above/below
   markChanged();                       // remember to save
 }                                      // end of changeItem
