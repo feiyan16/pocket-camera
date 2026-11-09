@@ -42,12 +42,16 @@ struct Label {
   int cx0, cy0, cx1, cy1;   // corners; x1 and y1 are "just past" the edge, so width = cx1 - cx0
   uint16_t color;           // colour of the letters (RGB565)
   unsigned long shownAt;    // when it appeared (millis()), to know when to hide it
+  uint8_t mask;
 };                          // a struct definition ends with a semicolon
 
 // ----------------------------------------------------------------------
 // Shared variables (created in labels.cpp; "extern" explained in display.h)
 // ----------------------------------------------------------------------
 extern Label label;   // the one label: showFrame() paints it, loop() hides it after LABEL_MS
+extern Label mainLabel;
+extern Label prevLabel;
+extern Label nextLabel;
 
 // Label masks: small pixel grids where 0 = see-through, 1 = outline, 2 = letter.
 extern uint8_t textMask[MASK_H][MASK_W];   // the label as you read it (text coordinates), 2-D: [row][column]
@@ -64,6 +68,10 @@ int buildTextMask(const char *text);
 // Shows a label at the bottom centre (as you hold the camera) for LABEL_MS.
 // Example: showLabel("SUNNY", 0xFFE0) shows "SUNNY" in yellow.
 void showLabel(const char *text, uint16_t color);
+
+void showPresetMenu();
+
+void hidePresetMenu();
 
 // Hides the label. Nothing needs erasing: the next frame simply doesn't include it.
 void hideLabel();
