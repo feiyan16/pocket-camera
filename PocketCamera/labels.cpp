@@ -22,8 +22,6 @@ Label label = {false, 0, 0, 0, 0, 0, 0};
 Label mainLabel = {false, 0, 0, 0, 0, 0, 0};
 Label prevLabel = {false, 0, 0, 0, 0, 0, 0};
 Label nextLabel = {false, 0, 0, 0, 0, 0, 0};
-uint8_t textMask[MASK_H][MASK_W];   // text-coordinate mask (starts all 0)
-uint8_t camMask[MASK_W * MASK_H];   // camera-coordinate mask (starts all 0)
 
 // ----------------------------------------------------------------------
 // Helpers used only in this file (so they aren't listed in labels.h)
