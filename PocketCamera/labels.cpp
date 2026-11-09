@@ -18,6 +18,10 @@
 // ----------------------------------------------------------------------
 // One global Label, starting switched off with every field 0.
 Label label = {false, 0, 0, 0, 0, 0, 0};
+// Filter settings labels
+Label mainLabel = {false, 0, 0, 0, 0, 0, 0};
+Label prevLabel = {false, 0, 0, 0, 0, 0, 0};
+Label nextLabel = {false, 0, 0, 0, 0, 0, 0};
 uint8_t textMask[MASK_H][MASK_W];   // text-coordinate mask (starts all 0)
 uint8_t camMask[MASK_W * MASK_H];   // camera-coordinate mask (starts all 0)
 
@@ -89,23 +93,19 @@ int buildTextMask(const char *text) {        // text = the words to draw
     }                                                 // end of x
   }                                                   // end of y
   return w;                                           // hand back the width
-}                                                     // end of buildTextMask
+}    
 
 // The label is converted to camera coordinates here, once; showFrame() then
 // paints it into every frame while it's active.
-void showLabel(const char *text, uint16_t color) {
-  int w = buildTextMask(text);                    // draw the words into textMask; w = their width
-  int tx0 = (TXT_W - w) / 2;                      // left edge, centred across the screen (text coordinates)
-  int ty0 = TXT_H - LABEL_BOTTOM_GAP - MASK_H;    // top edge, LABEL_BOTTOM_GAP pixels up from the bottom
-
+void _showLabel(Label *label, uint16_t color, int w, int tx0, int ty0) {
   // Find the label's rectangle in camera coordinates by converting two opposite corners.
   int ax, ay, bx, by;                             // the two converted corners
   textPixelToCamera(tx0, ty0, ax, ay);            // top-left corner of the text
   textPixelToCamera(tx0 + w - 1, ty0 + MASK_H - 1, bx, by);  // bottom-right corner of the text
   // After rotating, either corner could be the smaller one, so take min and max.
-  label.cx0 = min(ax, bx);  label.cx1 = max(ax, bx) + 1;     // +1 because x1 is "just past" the edge
-  label.cy0 = min(ay, by);  label.cy1 = max(ay, by) + 1;     // same for y
-  int cw = label.cx1 - label.cx0;                 // width of the rectangle in camera coordinates
+  label->cx0 = min(ax, bx);  label->cx1 = max(ax, bx) + 1;     // +1 because x1 is "just past" the edge
+  label->cy0 = min(ay, by);  label->cy1 = max(ay, by) + 1;     // same for y
+  int cw = label->cx1 - label->cx0;                 // width of the rectangle in camera coordinates
 
   // Copy every mask pixel to its spot in the camera-coordinate mask.
   for (int y = 0; y < MASK_H; y++) {              // every row of the text mask...
@@ -114,15 +114,46 @@ void showLabel(const char *text, uint16_t color) {
       textPixelToCamera(tx0 + x, ty0 + y, cx, cy);  // convert its screen position
       // camMask is one long row-after-row list, so position (column, row)
       // is at row * width + column. Example: row 2, column 5, width 18 -> 2*18+5 = 41.
-      camMask[(cy - label.cy0) * cw + (cx - label.cx0)] = textMask[y][x];
+      label->mask[(cy - label->cy0) * cw + (cx - label->cx0)] = textMask[y][x];
     }                                             // end of columns
   }                                               // end of rows
-  label.color = color;                            // remember the letter colour
-  label.shownAt = millis();                       // millis() = milliseconds since the board started
-  label.active = true;                            // switch it on: showFrame() starts painting it
+  label->color = color;                            // remember the letter colour
+  label->shownAt = millis();                       // millis() = milliseconds since the board started
+  label->active = true;                            // switch it on: showFrame() starts painting it
 }                                                 // end of showLabel
+
+void showLabel(const char *text, uint16_t color) {
+  int w = buildTextMask(text);                    // draw the words into textMask; w = their width
+  int tx0 = (TXT_W - w) / 2;                      // left edge, centred across the screen (text coordinates)
+  int ty0 = TXT_H - LABEL_BOTTOM_GAP - MASK_H;    // top edge, LABEL_BOTTOM_GAP pixels up from the bottom
+  _showLabel(&label, color, w, tx0, ty0);
+}
+
+void showPresetMenu(const char *main_text, const char *prev_text, const char *next_text) {  
+  int main_w = buildTextMask(main_text);         
+  int main_tx0 = TXT_W - (10 + main_w); // 10 is an estimate, need to measure width from cover edge and star pointy bit
+  int main_ty0 = TXT_H - (140 + MASK_H); // 140 is an estimate, need to measure where the star pointy bit actually points to
+  _showLabel(&mainLabel, 0xFFE0, main_w, main_tx0, main_ty0);
+
+  int prev_w = buildTextMask(prev_text);
+  int prev_tx0 = TXT_W - (10 + prev_w)
+  int prev_ty0 = main_ty0 - (8 + MASK_H);
+  _showLabel(&prevLabel, 0xC618, prev_w, prev_tx0, prev_ty0);
+
+  int next_w = buildTextMask(next_text);
+  int next_tx0 = TXT_W - (10 + next_w)
+  int next_ty0 = main_ty0 + (8 + MASK_H);  
+  _showLabel(&nextLabel, 0xC618, next_w, next_tx0, next_ty0);
+}
 
 // Switches the label off. Nothing needs erasing: the next frame simply doesn't include it.
 void hideLabel() {
   label.active = false;   // switch the label off; showFrame() stops painting it
 }                                                 // end of hideLabel
+
+void hidePresetMenu() {
+  Label *labels[] = {&mainLabel, &prevLabel, &nextLabel}
+  for (int i = 0; i < 3; i++) {
+    labels[i]->active = false;
+  }
+}
