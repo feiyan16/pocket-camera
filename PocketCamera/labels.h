@@ -42,7 +42,8 @@ struct Label {
   int cx0, cy0, cx1, cy1;   // corners; x1 and y1 are "just past" the edge, so width = cx1 - cx0
   uint16_t color;           // colour of the letters (RGB565)
   unsigned long shownAt;    // when it appeared (millis()), to know when to hide it
-  uint8_t mask;
+  uint8_t textMask[MASK_H][MASK_W];   // text-coordinate mask (starts all 0)
+  uint8_t camMask[MASK_W * MASK_H];   // camera-coordinate mask (starts all 0)
 };                          // a struct definition ends with a semicolon
 
 // ----------------------------------------------------------------------
