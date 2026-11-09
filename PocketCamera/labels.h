@@ -69,7 +69,7 @@ int buildTextMask(const char *text);
 // Example: showLabel("SUNNY", 0xFFE0) shows "SUNNY" in yellow.
 void showLabel(const char *text, uint16_t color);
 
-void showPresetMenu();
+void showPresetMenu(const char *main_text, const char *prev_text, const char *next_text);
 
 void hidePresetMenu();
 
