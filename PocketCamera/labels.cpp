@@ -54,7 +54,7 @@ void textPixelToCamera(int tx, int ty, int &cx, int &cy) {
 // ----------------------------------------------------------------------
 // Functions promised in labels.h
 // ----------------------------------------------------------------------
-int buildTextMask(const char *text) {        // text = the words to draw
+int buildTextMask(const char *text, uint8_t *textMask) {        // text = the words to draw
   int n = min((int)strlen(text), MAX_LABEL_CHARS);  // number of letters, capped at 20; strlen counts characters
   int w = n * FONT_ADV + 2;                  // mask width: letters + 1 pixel each side for the outline
   memset(textMask, 0, sizeof(textMask));     // memset fills memory with a value: here, everything see-through (0)
@@ -96,6 +96,8 @@ int buildTextMask(const char *text) {        // text = the words to draw
 // The label is converted to camera coordinates here, once; showFrame() then
 // paints it into every frame while it's active.
 void _showLabel(Label *label, uint16_t color, int w, int tx0, int ty0) {
+  int w = buildTextMask(text, label->textMask);   // draw the words into textMask; w = their width
+
   // Find the label's rectangle in camera coordinates by converting two opposite corners.
   int ax, ay, bx, by;                             // the two converted corners
   textPixelToCamera(tx0, ty0, ax, ay);            // top-left corner of the text
@@ -112,7 +114,7 @@ void _showLabel(Label *label, uint16_t color, int w, int tx0, int ty0) {
       textPixelToCamera(tx0 + x, ty0 + y, cx, cy);  // convert its screen position
       // camMask is one long row-after-row list, so position (column, row)
       // is at row * width + column. Example: row 2, column 5, width 18 -> 2*18+5 = 41.
-      label->mask[(cy - label->cy0) * cw + (cx - label->cx0)] = textMask[y][x];
+      label->camMask[(cy - label->cy0) * cw + (cx - label->cx0)] = label->textMask[y][x];
     }                                             // end of columns
   }                                               // end of rows
   label->color = color;                            // remember the letter colour
@@ -121,27 +123,23 @@ void _showLabel(Label *label, uint16_t color, int w, int tx0, int ty0) {
 }                                                 // end of showLabel
 
 void showLabel(const char *text, uint16_t color) {
-  int w = buildTextMask(text);                    // draw the words into textMask; w = their width
   int tx0 = (TXT_W - w) / 2;                      // left edge, centred across the screen (text coordinates)
   int ty0 = TXT_H - LABEL_BOTTOM_GAP - MASK_H;    // top edge, LABEL_BOTTOM_GAP pixels up from the bottom
-  _showLabel(&label, color, w, tx0, ty0);
+  _showLabel(&label, text, color, tx0, ty0);
 }
 
 void showPresetMenu(const char *main_text, const char *prev_text, const char *next_text) {  
-  int main_w = buildTextMask(main_text);         
   int main_tx0 = TXT_W - (10 + main_w); // 10 is an estimate, need to measure width from cover edge and star pointy bit
   int main_ty0 = TXT_H - (140 + MASK_H); // 140 is an estimate, need to measure where the star pointy bit actually points to
-  _showLabel(&mainLabel, 0xFFE0, main_w, main_tx0, main_ty0);
+  _showLabel(&mainLabel, main_text, 0xFFFF, main_tx0, main_ty0);
 
-  int prev_w = buildTextMask(prev_text);
   int prev_tx0 = TXT_W - (10 + prev_w)
   int prev_ty0 = main_ty0 - (8 + MASK_H);
-  _showLabel(&prevLabel, 0xC618, prev_w, prev_tx0, prev_ty0);
-
-  int next_w = buildTextMask(next_text);
+  _showLabel(&prevLabel, prev_text, 0xC618, prev_tx0, prev_ty0);
+  
   int next_tx0 = TXT_W - (10 + next_w)
   int next_ty0 = main_ty0 + (8 + MASK_H);  
-  _showLabel(&nextLabel, 0xC618, next_w, next_tx0, next_ty0);
+  _showLabel(&nextLabel, next_text, 0xC618, next_tx0, next_ty0);
 }
 
 // Switches the label off. Nothing needs erasing: the next frame simply doesn't include it.
