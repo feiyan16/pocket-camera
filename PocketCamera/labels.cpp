@@ -65,8 +65,9 @@ void textPixelToCamera(int tx, int ty, int &cx, int &cy) {
 // Draws text into the scratch textMask, then copies it into ONE label at
 // (tx0, ty0) in text coordinates, and switches that label on.
 // "Label *l" = the address of the label to fill, e.g. &mainLabel.
-// Example: placeLabel(&mainLabel, "CLOUDY", 0xFFFF, 191, 82).
-void placeLabel(Label *l, const char *text, uint16_t color, int tx0, int ty0) {
+// outline = true: dark outline around the letters; false: letters only.
+// Example: placeLabel(&mainLabel, "CLOUDY", 0xFFFF, 191, 56, true).
+void placeLabel(Label *l, const char *text, uint16_t color, int tx0, int ty0, bool outline) {
   int w = buildTextMask(text);                 // draw the words into textMask; w = their width
   // Keep the label fully on screen. constrain(value, low, high) clamps a number.
   // Example: tx0 = -5 becomes 0; a label that would stick out of the bottom is pushed up.
@@ -91,7 +92,9 @@ void placeLabel(Label *l, const char *text, uint16_t color, int tx0, int ty0) {
       textPixelToCamera(tx0 + x, ty0 + y, cx, cy);  // convert its screen position
       // camMask is one long row-after-row list, so position (column, row)
       // is at row * width + column. Example: row 2, column 5, width 18 -> 2*18+5 = 41.
-      l->camMask[(cy - l->cy0) * cw + (cx - l->cx0)] = textMask[y][x];
+      uint8_t v = textMask[y][x];                 // 0 = see-through, 1 = outline, 2 = letter
+      if (!outline && v == 1) v = 0;              // no outline wanted: outline pixels become see-through
+      l->camMask[(cy - l->cy0) * cw + (cx - l->cx0)] = v;
     }                                             // end of columns
   }                                               // end of rows
   l->color = color;                               // remember the letter colour
@@ -151,19 +154,19 @@ int labelWidth(const char *text) {
 void showLabel(const char *text, uint16_t color) {
   int tx0 = (TXT_W - labelWidth(text)) / 2;       // left edge, centred. Example: (280 - 67) / 2 = 106
   int ty0 = TXT_H - LABEL_BOTTOM_GAP - MASK_H;    // top edge. Example: 240 - 12 - 18 = 210
-  placeLabel(&label, text, color, tx0, ty0);      // build it, convert it, switch it on
+  placeLabel(&label, text, color, tx0, ty0, true);  // build it, convert it, switch it on (with outline)
 }                                                 // end of showLabel
 
 // The three-line menu, right-aligned: every line's RIGHT edge is
 // MENU_RIGHT_GAP pixels from the screen edge, whatever its length.
 void showPresetMenu(const char *main_text, const char *prev_text, const char *next_text) {
   int step = MASK_H + MENU_LINE_GAP;              // distance between lines. Example: 18 + 8 = 26 px
-  int main_ty0 = TXT_H - (MENU_FROM_BOTTOM + MASK_H);  // selected item's top edge. Example: 240 - 158 = 82
+  int main_ty0 = TXT_H - (MENU_FROM_BOTTOM + MASK_H);  // selected item's top edge. Example: 240 - (166 + 18) = 56
   // Each line uses ITS OWN width, so all three line up on the right.
   // Example: "CLOUDY" is 80 px wide -> left edge 280 - (10 + 80) = 190.
-  placeLabel(&mainLabel, main_text, 0xFFFF, TXT_W - (MENU_RIGHT_GAP + labelWidth(main_text)), main_ty0);         // white, middle
-  placeLabel(&prevLabel, prev_text, 0xC618, TXT_W - (MENU_RIGHT_GAP + labelWidth(prev_text)), main_ty0 - step);  // light grey, above
-  placeLabel(&nextLabel, next_text, 0xC618, TXT_W - (MENU_RIGHT_GAP + labelWidth(next_text)), main_ty0 + step);  // light grey, below
+  placeLabel(&mainLabel, main_text, 0xFFFF, TXT_W - (MENU_RIGHT_GAP + labelWidth(main_text)), main_ty0, true);          // white with outline, middle
+  placeLabel(&prevLabel, prev_text, 0xC618, TXT_W - (MENU_RIGHT_GAP + labelWidth(prev_text)), main_ty0 - step, false);  // light grey, no outline, above
+  placeLabel(&nextLabel, next_text, 0xC618, TXT_W - (MENU_RIGHT_GAP + labelWidth(next_text)), main_ty0 + step, false);  // light grey, no outline, below
 }                                                 // end of showPresetMenu
 
 // Switches the label off. Nothing needs erasing: the next frame simply doesn't include it.

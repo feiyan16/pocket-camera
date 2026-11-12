@@ -125,5 +125,5 @@ const unsigned long SAVE_DELAY_MS = 3000;  // 3000 ms = 3 seconds
 // Preset menu (right side, as you hold the camera)
 // ----------------------------------------------------------------------
 const int MENU_RIGHT_GAP   = 10;   // px from the right edge to the end of each line (estimate: measure to the cover edge)
-const int MENU_FROM_BOTTOM = 140;  // px from the bottom edge to the bottom of the selected item (estimate: measure the star's point)
+const int MENU_FROM_BOTTOM = 166;  // px from the bottom edge to the bottom of the selected item (was 140; raised one full line, 26 px)
 const int MENU_LINE_GAP    = 8;    // px of space between menu lines
