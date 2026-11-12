@@ -72,8 +72,8 @@ void placeLabel(Label *l, const char *text, uint16_t color, int tx0, int ty0, bo
   // Keep the label fully on screen. constrain(value, low, high) clamps a number.
   // Example: tx0 = -5 becomes 0; a label that would stick out of the bottom is pushed up.
   // Without this, part of the label would land outside the picture and be cut off.
-  tx0 = constrain(tx0, 0, TXT_W - w);
-  ty0 = constrain(ty0, 0, TXT_H - MASK_H);
+  tx0 = constrain(tx0, 0, TXT_W - w);             // left edge: never off the left or right side
+  ty0 = constrain(ty0, 0, TXT_H - MASK_H);       // same for the top edge. Example: 230 becomes 222 (240 - 18) so it isn't cut off
 
   // Find the label's rectangle in camera coordinates by converting two opposite corners.
   int ax, ay, bx, by;                             // the two converted corners
@@ -94,7 +94,7 @@ void placeLabel(Label *l, const char *text, uint16_t color, int tx0, int ty0, bo
       // is at row * width + column. Example: row 2, column 5, width 18 -> 2*18+5 = 41.
       uint8_t v = textMask[y][x];                 // 0 = see-through, 1 = outline, 2 = letter
       if (!outline && v == 1) v = 0;              // no outline wanted: outline pixels become see-through
-      l->camMask[(cy - l->cy0) * cw + (cx - l->cx0)] = v;
+      l->camMask[(cy - l->cy0) * cw + (cx - l->cx0)] = v;  // store it in this label's own mask
     }                                             // end of columns
   }                                               // end of rows
   l->color = color;                               // remember the letter colour
@@ -177,6 +177,6 @@ void hideLabel() {
 // Switches the three menu labels off.
 void hidePresetMenu() {
   mainLabel.active = false;   // the real labels (not copies), so they really disappear
-  prevLabel.active = false;
-  nextLabel.active = false;
+  prevLabel.active = false;   // the line above disappears too
+  nextLabel.active = false;   // and the line below
 }                                                 // end of hidePresetMenu
